@@ -124,6 +124,8 @@ def get_conversation(group_id: str, conversation_id: str):
             conn, "SELECT id, checklist_id, checklist_version, model, status, ai_total, final_total,"
                   " ai_critical_flag, final_critical_flag, created_at FROM evaluations"
                   " WHERE group_id=? AND conversation_id=? ORDER BY id DESC", (group_id, conversation_id))
+    times = [u["t"] for u in c["transcript"] if u["t"] is not None]
+    c["duration"] = max(times) if times else None
     c["audio_path"] = _audio_path(c)
     del c["audio_url"]
     return c

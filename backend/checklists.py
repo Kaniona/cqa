@@ -1,5 +1,6 @@
 """Чек-листы: проверка и версии. Старые версии не меняются, PUT всегда создаёт новую."""
 import json
+import time
 from contextlib import closing
 
 from fastapi import HTTPException
@@ -64,6 +65,8 @@ def _insert(conn, cl, version):
 
 
 def create(cl):
+    if isinstance(cl, dict) and not str(cl.get("id") or "").strip():
+        cl = {**cl, "id": f"checklist-{int(time.time() * 1000)}"}  # сайт создаёт чек-лист без id
     warnings = validate(cl)
     with closing(db.connect()) as conn, conn:
         if db.get_checklist(conn, cl["id"]):
@@ -88,7 +91,7 @@ def latest_all():
 
 def versions(checklist_id):
     with closing(db.connect()) as conn:
-        r = db.rows(conn, "SELECT id, version, name, created_at FROM checklists WHERE id=? ORDER BY version",
+        r = db.rows(conn, "SELECT id, version, name, created_at FROM checklists WHERE id=? ORDER BY version DESC",
                     (checklist_id,))
     if not r:
         raise HTTPException(404, "чек-лист не найден")

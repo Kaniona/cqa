@@ -76,7 +76,7 @@ def test_checklist_versions(client):
     changed = {**STANDARD, "criteria": STANDARD["criteria"][:-2] + [{**STANDARD["criteria"][6], "weight": 10}]}
     r2 = client.put("/api/checklists/chat-quality", json=changed).json()
     assert r2["version"] == 2 and r2["warnings"]
-    assert len(client.get("/api/checklists/chat-quality/versions").json()) == 2
+    assert [v["version"] for v in client.get("/api/checklists/chat-quality/versions").json()] == [2, 1]
     assert len(client.get("/api/checklists/chat-quality/versions/1").json()["criteria"]) == 8
 
 
@@ -101,6 +101,7 @@ def test_full_path(client, monkeypatch):
                                              "comment": "ещё"}).status_code == 409
     queue = client.get("/api/appeals?status=open").json()
     assert client.get("/api/appeals?status=resolved").json() == []
+    assert client.post("/api/checklists", json={**STANDARD, "id": ""}).json()["id"].startswith("checklist-")
     assert queue[0]["criterion_id"] == "c07" and queue[0]["title"] == "Завершение" and queue[0]["fragment"]
     aid = appeal.json()["id"]
     assert client.post(f"/api/appeals/{aid}/decision", json={"decision": "changed", "new_answer": "NA",

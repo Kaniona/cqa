@@ -33,8 +33,8 @@ def summary(group_id=None, checklist_id=None):
                 else:
                     ratios[c["id"]].append(float(ratio))
         ids = [ev["id"] for ev in evs]
-        appeals = Counter(r["status"] for r in db.rows(
-            conn, f"SELECT status FROM appeals WHERE evaluation_id IN ({','.join('?' * len(ids))})", ids)) if ids else {}
+        appeals = Counter(r["decision"] or "open" for r in db.rows(
+            conn, f"SELECT decision FROM appeals WHERE evaluation_id IN ({','.join('?' * len(ids))})", ids)) if ids else {}
 
     scored = [ev for ev in evs if ev["final_total"] is not None]
 

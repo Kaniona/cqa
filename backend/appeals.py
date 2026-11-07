@@ -31,11 +31,8 @@ def create(evaluation_id, criterion_id, comment, created_by=None):
 
 def queue(status=None):
     with closing(db.connect()) as conn:
-        if status == "resolved":  # так фронтенд просит все закрытые
-            appeals = db.rows(conn, "SELECT * FROM appeals WHERE status != 'open' ORDER BY id")
-        else:
-            appeals = db.rows(conn, "SELECT * FROM appeals" + (" WHERE status=?" if status else "") + " ORDER BY id",
-                              (status,) if status else ())
+        appeals = db.rows(conn, "SELECT * FROM appeals" + (" WHERE status=?" if status else "") + " ORDER BY id",
+                          (status,) if status else ())
         out = []
         for a in appeals:
             ev = db.row(conn, "SELECT * FROM evaluations WHERE id=?", (a["evaluation_id"],))
@@ -112,9 +109,9 @@ def decide(appeal_id, decision, new_answer, decision_reason, decided_by=None):
             conn.execute("UPDATE evaluations SET final_total=?, final_critical_flag=? WHERE id=?",
                          (comp["total"], comp["critical_flag"], eid))
         conn.execute(
-            "UPDATE appeals SET status=?, decision=?, new_answer=?, decision_reason=?, decided_by=?, decided_at=?"
+            "UPDATE appeals SET status='resolved', decision=?, new_answer=?, decision_reason=?, decided_by=?, decided_at=?"
             " WHERE id=?",
-            (decision, decision, json.dumps(new_answer) if decision == "changed" else None,
+            (decision, json.dumps(new_answer) if decision == "changed" else None,
              decision_reason.strip(), decided_by, db.now(), appeal_id))
     with closing(db.connect()) as conn:
         return db.get_evaluation(conn, eid)
