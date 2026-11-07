@@ -18,7 +18,7 @@
     }
 
     function drawLeft() {
-      CQA.fill(left,
+      left.replaceChildren(
         h("h2", { class: "cqa-card-title" }, "Чек-листы"),
         lists.map((c) => h("button", { class: "cqa-list-item" + (current && current.id === c.id ? " cqa-active" : ""), onClick: () => open(c.id) }, h("b", {}, c.name), h("div", { class: "cqa-small cqa-muted" }, `Версия ${c.version} · критериев: ${c.criteria.length}`))),
         h("button", { class: "cqa-btn", style: "width:100%;margin-top:8px", onClick: () => {
@@ -39,7 +39,7 @@
 
     function stepsEditor(c) {
       const box = h("div", {});
-      const draw2 = () => CQA.fill(box,
+      const draw2 = () => box.replaceChildren(
         h("div", { class: "cqa-small cqa-muted", style: "font-weight:600;margin-bottom:4px" }, "Ступени шкалы"),
         c.steps.map((s, i) => h("div", { class: "cqa-step" },
           h("input", { class: "cqa-input", type: "number", min: 0, value: s.value, disabled: readOnly, "aria-label": "Балл", onInput: (e) => { s.value = Number(e.target.value); } }),
@@ -99,7 +99,7 @@
           right.prepend(h("div", { class: "cqa-alert cqa-alert-ok cqa-row" }, h("span", { class: "cqa-grow" }, `Создана версия ${saved.version}. Старые оценки сохранены на своей версии.` + (saved.warnings && saved.warnings.length ? " " + saved.warnings.join(" ") : "")), h("a", { class: "cqa-btn cqa-primary", href: "#/dialogs", style: "text-decoration:none" }, "Применить к диалогам")));
         } catch (e) { msg.replaceChildren(CQA.errorBox(e)); }
       };
-      CQA.fill(right,
+      right.replaceChildren(
         readOnly && h("div", { class: "cqa-alert cqa-alert-warn" }, `Версия ${current.version} только для чтения. Изменять можно последнюю версию.`),
         h("div", { class: "cqa-card cqa-row" },
           h("label", { class: "cqa-field cqa-grow" }, "Название чек-листа", h("input", { class: "cqa-input", value: current.name, disabled: readOnly, onInput: (e) => { current.name = e.target.value; } })),

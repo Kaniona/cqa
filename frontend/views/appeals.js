@@ -16,7 +16,7 @@
     }
 
     function draw() {
-      CQA.fill(left,
+      left.replaceChildren(
         h("select", { class: "cqa-input", style: "width:100%;margin-bottom:8px", "aria-label": "Статус", onChange: (e) => { statusFilter = e.target.value; load(); } },
           [["open", "Открытые"], ["resolved", "Закрытые"], ["", "Все"]].map(([v, t]) => h("option", { value: v, selected: statusFilter === v }, t))),
         list.length ? list.map((a) => h("button", { class: "cqa-list-item" + (a.id === selectedId ? " cqa-active" : ""), onClick: () => { selectedId = a.id; draw(); } },

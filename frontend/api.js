@@ -19,9 +19,6 @@ window.CQA = { views: {}, state: { group: "DEV", checklist: "chat-quality", role
     return el;
   };
 
-  // replaceChildren по правилам h(): массивы раскрываются, false и null пропускаются.
-  CQA.fill = (el, ...kids) => el.replaceChildren(...CQA.h("div", {}, ...kids).childNodes);
-
   CQA.num = (n) => (n === null || n === undefined ? "—" : Number(n).toLocaleString("ru-RU", { maximumFractionDigits: 2 }));
   CQA.time = (sec) => {
     if (sec === null || sec === undefined || isNaN(sec)) return "—";
