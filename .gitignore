@@ -4,3 +4,8 @@
 __pycache__/
 .venv/
 .pytest_cache/
+
+# Копии и варианты .env (в них ключи и подпись sig=)
+.env.*
+!.env.example
+*.save
