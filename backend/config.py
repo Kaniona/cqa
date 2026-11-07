@@ -10,7 +10,7 @@ if _env.exists():
         line = line.strip()
         if line and not line.startswith("#") and "=" in line:
             key, value = line.split("=", 1)
-            os.environ.setdefault(key.strip(), value.strip())
+            os.environ.setdefault(key.strip(), value.split(" #")[0].strip())  # " # ..." — комментарий
 
 CQA_API_URL = os.environ.get("CQA_API_URL", "")
 DB_PATH = str(ROOT / os.environ.get("DB_PATH", "cqa.db"))
