@@ -1,8 +1,27 @@
-// Экран «Аналитика»: где повторяются проблемы.
+// Раздел «Аналитика»: «Анализ разговора», «Оценка диалогов» и «Сводка».
 (function (CQA) {
   const { h, api } = CQA;
 
-  CQA.views.analytics = async function () {
+  CQA.views.analytics = async function (parts, params) {
+    if (parts[0] === "run") return CQA.views.run();
+    if (parts[0] === "summary") return summary();
+    return conversation(params);
+  };
+
+  // Без выбранного диалога: последний открытый, иначе первый оценённый звонок, иначе первый диалог набора.
+  async function conversation(params) {
+    const rows = await api.conversations({ group_id: CQA.state.group, checklist_id: CQA.state.checklist });
+    let last = null;
+    try { last = JSON.parse(localStorage.getItem("cqa-last")); } catch (e) { /* хранилище недоступно */ }
+    const pick = rows.find((r) => last && r.group_id === last[0] && r.conversation_id === last[1])
+      || rows.find((r) => r.audio_path && r.final_total !== null) || rows[0];
+    if (!pick) return CQA.page(CQA.anaHead("dialog", "Анализ разговора", null),
+      h("div", { class: "cqa-card cqa-empty" }, "Диалогов пока нет. ", h("a", { class: "cqa-link", href: "#/analytics/run" }, "Загрузите и оцените набор")));
+    return CQA.views.card([pick.group_id, pick.conversation_id], params, rows);
+  }
+
+  // «Сводка»: где повторяются проблемы.
+  async function summary() {
     const lists = await api.checklists();
     const data = await api.analytics({ group_id: CQA.state.group, checklist_id: CQA.state.checklist });
     const a = data.appeals;
@@ -15,7 +34,7 @@
     const checklist = lists.find((c) => c.id === CQA.state.checklist);
 
     return CQA.page(
-      CQA.top("Аналитика", [`Набор ${CQA.state.group}`, checklist && `${checklist.name} · версия ${checklist.version}`, `Оценено: ${data.evaluated}`],
+      CQA.anaHead("summary", "Сводка", [`Набор ${CQA.state.group}`, checklist && `${checklist.name} · версия ${checklist.version}`, `Оценено: ${data.evaluated}`],
         h("select", { class: "cqa-f", "aria-label": "Чек-лист", onChange: (e) => { CQA.state.checklist = e.target.value; CQA.rerender(); } },
           lists.map((c) => h("option", { value: c.id, selected: c.id === CQA.state.checklist }, c.name)))),
       h("div", { class: "cqa-banner", style: "padding-block:18px" },
@@ -39,5 +58,5 @@
               st("p", "law", `${a.total} (откр. ${a.open})`, "Апелляции"),
               st("a", "chat", data.needs_review, "Нужна проверка"),
               st("g", "check", `${a.changed} / ${a.confirmed}`, "Изменено / подтверждено"))))));
-  };
+  }
 })(window.CQA);

@@ -19,7 +19,7 @@
 
   document.getElementById("cqa-root").append(
     h("aside", { class: "cqa-side" },
-      h("div", { class: "cqa-logo" }, h("i", {}, CQA.svgIcon("tick", 3)), "CQA"), nav,
+      h("div", { class: "cqa-logo" }, h("i", {}, CQA.svgIcon("tick", 3)), h("div", {}, "CQA", h("small", {}, "Контроль качества"))), nav,
       h("label", { class: "cqa-role" }, roleTile, h("div", { class: "cqa-grow" }, "Роль", roleSelect)),
       window.CQA_MOCK && h("div", { class: "cqa-demo-note" }, "Демо-режим: диалоги и оценки придуманы, сервер и ИИ не подключены."))
   );
@@ -32,7 +32,7 @@
     const [pathPart, search] = hash.split("?");
     const parts = pathPart.split("/");
     const name = parts[0];
-    const active = name === "dialog" ? "dialogs" : name;
+    const active = name === "dialog" ? "analytics" : name;
     Object.entries(links).forEach(([id, a]) => {
       a.classList.toggle("cqa-active", id === active);
       if (id === active) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
@@ -44,7 +44,7 @@
     try {
       if (!view) throw new Error("Раздел не найден");
       const node = await view(parts.slice(1).map(decodeURIComponent), new URLSearchParams(search || ""));
-      if (mine === token) { main.replaceChildren(node); main.scrollTop = 0; }
+      if (mine === token) { main.replaceChildren(node); main.scrollTop = 0; if (CQA.fx) CQA.fx.count(node); }
     } catch (e) {
       if (mine === token) main.replaceChildren(CQA.errorBox(e));
     }

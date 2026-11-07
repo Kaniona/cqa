@@ -23,6 +23,7 @@ window.CQA = { views: {}, state: { group: "DEV", checklist: "chat-quality", role
 
   // replaceChildren по правилам h(): массивы раскрываются, false и null пропускаются.
   CQA.fill = (el, ...kids) => el.replaceChildren(...CQA.h("div", {}, ...kids).childNodes);
+  CQA.put = CQA.fill;
 
   // Иконки и объёмные плитки из макета.
   const NS = "http://www.w3.org/2000/svg";
@@ -54,7 +55,10 @@ window.CQA = { views: {}, state: { group: "DEV", checklist: "chat-quality", role
       return c;
     };
     svg.append(circle("rgba(255,255,255,.3)", `${len} 0`));
-    if (part > 0) svg.append(circle("#fff", `${len * part} ${len}`));
+    const arc = circle("#fff", `${len * part} ${len}`);
+    arc.setAttribute("class", "cqa-ring-val");
+    if (part === 0) arc.style.opacity = "0";
+    svg.append(arc);
     return h("div", { class: "cqa-ring", role: "img", "aria-label": none ? "Не оценивается" : `Итог ${CQA.num(value)} из 100` }, svg,
       h("div", {}, h("b", { style: none ? "font-size:22px" : "" }, none ? "—" : CQA.num(value)), h("span", {}, none ? "не оценивается" : caption)));
   };
@@ -67,11 +71,31 @@ window.CQA = { views: {}, state: { group: "DEV", checklist: "chat-quality", role
   };
 
   // Цвет полосы по доле 0..1, как в макете.
-  CQA.barColor = (ratio) => (ratio < 0.6 ? "linear-gradient(90deg,#FF5470,#FF8A5B)" : ratio < 0.8 ? "linear-gradient(90deg,#F0902B,#FFD978)" : "linear-gradient(90deg,#2FD6B4,#3DEB8F)");
+  CQA.barColor = (ratio) => (ratio < 0.6 ? "linear-gradient(90deg,#E5484D,#FF8A5B)" : ratio < 0.8 ? "linear-gradient(90deg,#E89B12,#FFC857)" : "linear-gradient(90deg,#0DB463,#9ED11C)");
   CQA.page = (...kids) => h("div", { class: "cqa-page" }, ...kids);
   CQA.top = (title, chips, ...right) => h("div", { class: "cqa-top" },
     h("div", {}, h("h1", { class: "cqa-title" }, title), chips && chips.length ? h("div", { class: "cqa-chips" }, chips.filter(Boolean).map((c) => h("span", { class: "cqa-chip" }, c))) : null),
     h("div", { class: "cqa-row" }, ...right));
+
+  // Вкладки раздела «Аналитика». Подложка переезжает с прошлой вкладки на новую.
+  const TABS = [["dialog", "Анализ разговора", "#/analytics"], ["run", "Оценка диалогов", "#/analytics/run"], ["summary", "Сводка", "#/analytics/summary"]];
+  CQA.anaTabs = (active) => {
+    const thumb = h("i", { class: "cqa-tabs-thumb", "aria-hidden": "true" });
+    const links = TABS.map(([id, label, href]) => h("a", { href, class: id === active ? "cqa-on" : null, "aria-current": id === active ? "page" : null }, label));
+    const nav = h("nav", { class: "cqa-tabs", "aria-label": "Аналитика" }, thumb, links);
+    requestAnimationFrame(() => {
+      const on = links[TABS.findIndex(([id]) => id === active)];
+      if (!on || !on.offsetWidth) return;
+      const place = (x, w) => { thumb.style.transform = `translateX(${x}px)`; thumb.style.width = w + "px"; };
+      const from = CQA.state.tabRect;
+      if (from) { thumb.style.transition = "none"; place(from[0], from[1]); void thumb.offsetWidth; thumb.style.transition = ""; }
+      place(on.offsetLeft, on.offsetWidth);
+      nav.classList.add("cqa-ready");
+      CQA.state.tabRect = [on.offsetLeft, on.offsetWidth];
+    });
+    return nav;
+  };
+  CQA.anaHead = (active, title, chips, ...right) => [CQA.anaTabs(active), CQA.top(title, chips, ...right)];
 
   CQA.num =(n) => (n === null || n === undefined ? "—" : Number(n).toLocaleString("ru-RU", { maximumFractionDigits: 2 }));
   CQA.time = (sec) => {
