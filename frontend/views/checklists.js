@@ -6,7 +6,8 @@
     const lists = await api.checklists();
     const left = h("div", { class: "cqa-card" });
     const right = h("div", { class: "cqa-stack" });
-    let current = null, readOnly = false, versions = [];
+    const actions = h("div", { class: "cqa-row" });
+    let current = null, readOnly = false, versions = [], openIndex = null;
 
     async function open(id, version) {
       versions = await api.versions(id);
@@ -14,21 +15,23 @@
       const data = await api.version(id, version || latest);
       current = JSON.parse(JSON.stringify(data));
       readOnly = current.version !== latest;
+      openIndex = null;
       draw();
     }
 
     function drawLeft() {
-      left.replaceChildren(
+      CQA.fill(left,
         h("h2", { class: "cqa-card-title" }, "Чек-листы"),
-        lists.map((c) => h("button", { class: "cqa-list-item" + (current && current.id === c.id ? " cqa-active" : ""), onClick: () => open(c.id) }, h("b", {}, c.name), h("div", { class: "cqa-small cqa-muted" }, `Версия ${c.version} · критериев: ${c.criteria.length}`))),
-        h("button", { class: "cqa-btn", style: "width:100%;margin-top:8px", onClick: () => {
+        lists.map((c) => h("button", { class: "cqa-list-item" + (current && current.id === c.id ? " cqa-active" : ""), onClick: () => open(c.id) }, h("b", {}, c.name), h("small", {}, `Версия ${c.version} · критериев: ${c.criteria.length}`))),
+        h("button", { class: "cqa-f", style: "width:100%;margin-top:4px", onClick: () => {
           current = { id: null, version: 0, name: "Новый чек-лист", criteria: [] };
-          readOnly = false; versions = [];
+          readOnly = false; versions = []; openIndex = null;
           draw();
         } }, "+ Новый чек-лист"),
-        versions.length > 0 && h("div", { style: "margin-top:14px" },
-          h("div", { class: "cqa-small cqa-muted", style: "font-weight:600;margin-bottom:4px" }, "История версий"),
-          versions.map((v) => h("button", { class: "cqa-list-item" + (current && v.version === current.version ? " cqa-active" : ""), onClick: () => open(v.id, v.version) }, `Версия ${v.version}`, h("div", { class: "cqa-small cqa-muted" }, new Date(v.created_at).toLocaleString("ru-RU"))))));
+        versions.length > 0 && h("div", { style: "margin-top:20px" },
+          h("h2", { class: "cqa-card-title" }, "История версий"),
+          versions.map((v, i) => h("button", { class: "cqa-list-item" + (current && v.version === current.version ? " cqa-active" : ""), onClick: () => open(v.id, v.version) },
+            h("b", {}, `Версия ${v.version}` + (i === 0 ? " · текущая" : "")), h("small", {}, new Date(v.created_at).toLocaleString("ru-RU"))))));
     }
 
     const newId = () => {
@@ -39,7 +42,7 @@
 
     function stepsEditor(c) {
       const box = h("div", {});
-      const draw2 = () => box.replaceChildren(
+      const draw2 = () => CQA.fill(box,
         h("div", { class: "cqa-small cqa-muted", style: "font-weight:600;margin-bottom:4px" }, "Ступени шкалы"),
         c.steps.map((s, i) => h("div", { class: "cqa-step" },
           h("input", { class: "cqa-input", type: "number", min: 0, value: s.value, disabled: readOnly, "aria-label": "Балл", onInput: (e) => { s.value = Number(e.target.value); } }),
@@ -57,9 +60,9 @@
         if (c.type === "scale" && !c.steps.length) c.steps = [{ value: 10, label: "" }, { value: 0, label: "" }];
         draw();
       } }, [["yes_no", "Да / Нет"], ["scale", "Шкала"]].map(([v, t]) => h("option", { value: v, selected: c.type === v }, t)));
-      return h("div", { class: "cqa-editor-crit" },
-        h("div", { class: "cqa-row" }, h("b", { class: "cqa-grow" }, `${index + 1}. ${c.title || "Новый критерий"}`),
-          !readOnly && h("button", { class: "cqa-btn cqa-danger", onClick: () => { current.criteria.splice(index, 1); draw(); } }, "Удалить")),
+      return h("div", { class: "cqa-editor" },
+        !readOnly && h("div", { class: "cqa-row", style: "justify-content:flex-end" },
+          h("button", { class: "cqa-btn cqa-danger", onClick: () => { current.criteria.splice(index, 1); openIndex = null; draw(); } }, "Удалить критерий")),
         h("div", { class: "cqa-editor-grid" },
           field("Название", h("input", { class: "cqa-input", value: c.title, disabled: readOnly, onInput: (e) => { c.title = e.target.value; } })),
           field("Секция", h("input", { class: "cqa-input", value: c.section, disabled: readOnly, onInput: (e) => { c.section = e.target.value; } })),
@@ -77,9 +80,21 @@
         c.na_allowed && field("Условие N/A", h("input", { class: "cqa-input", value: c.na_condition, disabled: readOnly, onInput: (e) => { c.na_condition = e.target.value; } })));
     }
 
+    // Строка критерия как в макете: номер, название, тип, вес, N/A.
+    function criterionRow(c, i, colors) {
+      const type = c.is_critical ? "Флаг" : c.type === "scale" ? `Шкала ${Math.min(...c.steps.map((s) => s.value))}–${Math.max(...c.steps.map((s) => s.value))}` : "Да / Нет";
+      const isOpen = openIndex === i;
+      return h("button", { class: "cqa-cr" + (isOpen ? " cqa-open" : ""), "aria-expanded": isOpen ? "true" : "false", onClick: () => { openIndex = isOpen ? null : i; draw(); } },
+        CQA.tile(c.is_critical ? "r" : colors[c.section] || "g", String(i + 1)),
+        h("div", { style: "font-weight:700" }, c.title || "Новый критерий"),
+        h("div", {}, type),
+        h("div", { style: "font-weight:800" }, c.is_critical ? "—" : c.weight),
+        h("div", {}, c.na_allowed ? "да" : "нет"));
+    }
+
     function draw() {
       drawLeft();
-      if (!current) { right.replaceChildren(h("div", { class: "cqa-card cqa-empty" }, "Выберите чек-лист")); return; }
+      if (!current) { actions.replaceChildren(); right.replaceChildren(h("div", { class: "cqa-card cqa-empty" }, "Выберите чек-лист")); return; }
       const sum = h("span", {});
       const updateSum = () => {
         const s = current.criteria.reduce((a, c) => a + Number(c.weight || 0), 0);
@@ -99,25 +114,36 @@
           right.prepend(h("div", { class: "cqa-alert cqa-alert-ok cqa-row" }, h("span", { class: "cqa-grow" }, `Создана версия ${saved.version}. Старые оценки сохранены на своей версии.` + (saved.warnings && saved.warnings.length ? " " + saved.warnings.join(" ") : "")), h("a", { class: "cqa-btn cqa-primary", href: "#/dialogs", style: "text-decoration:none" }, "Применить к диалогам")));
         } catch (e) { msg.replaceChildren(CQA.errorBox(e)); }
       };
-      right.replaceChildren(
+      CQA.fill(actions,
+        !readOnly && h("button", { class: "cqa-pill", onClick: () => {
+          current.criteria.push({ id: newId(), section: "", title: "", instruction: "", type: "yes_no", weight: 0, steps: [], na_allowed: false, na_condition: "", is_critical: false });
+          openIndex = current.criteria.length - 1;
+          draw();
+        } }, "+ Критерий"),
+        !readOnly && h("button", { class: "cqa-pill cqa-grad", onClick: save }, "Сохранить"));
+      const palette = ["g", "t", "p", "a", "b"], colors = {};
+      current.criteria.forEach((c) => { if (!(c.section in colors)) colors[c.section] = palette[Object.keys(colors).length % palette.length]; });
+      CQA.fill(right,
         readOnly && h("div", { class: "cqa-alert cqa-alert-warn" }, `Версия ${current.version} только для чтения. Изменять можно последнюю версию.`),
-        h("div", { class: "cqa-card cqa-row" },
-          h("label", { class: "cqa-field cqa-grow" }, "Название чек-листа", h("input", { class: "cqa-input", value: current.name, disabled: readOnly, onInput: (e) => { current.name = e.target.value; } })),
-          sum,
-          !readOnly && h("button", { class: "cqa-btn", onClick: () => {
-            current.criteria.push({ id: newId(), section: "", title: "", instruction: "", type: "yes_no", weight: 0, steps: [], na_allowed: false, na_condition: "", is_critical: false });
-            draw();
-          } }, "+ Критерий"),
-          !readOnly && h("button", { class: "cqa-btn cqa-primary", onClick: save }, "Сохранить")),
         msg,
-        current.criteria.map((c, i) => criterionEditor(c, i, updateSum)));
+        h("div", { class: "cqa-card" },
+          h("div", { class: "cqa-row", style: "margin-bottom:12px" },
+            h("label", { class: "cqa-field cqa-grow" }, "Название чек-листа", h("input", { class: "cqa-input", value: current.name, disabled: readOnly, onInput: (e) => { current.name = e.target.value; } })),
+            sum),
+          h("div", { class: "cqa-row", style: "justify-content:space-between;margin-bottom:9px" }, h("h2", { class: "cqa-card-title", style: "margin:0" }, "Критерии")),
+          h("div", { class: "cqa-cr cqa-cr-head", "aria-hidden": "true" }, h("div", {}), h("div", {}, "Критерий"), h("div", {}, "Тип"), h("div", {}, "Вес"), h("div", {}, "N/A")),
+          current.criteria.length ? current.criteria.map((c, i) => [
+            criterionRow(c, i, colors),
+            openIndex === i ? criterionEditor(c, i, updateSum)
+              : c.type === "scale" && !c.is_critical ? h("div", { class: "cqa-steps" }, c.steps.map((st) => h("span", {}, st.value))) : null,
+          ]) : h("div", { class: "cqa-empty" }, "Критериев пока нет. Нажмите «+ Критерий».")));
     }
 
     if (lists[0]) await open((lists.find((c) => c.id === CQA.state.checklist) || lists[0]).id);
     else draw();
 
-    return h("div", {},
-      h("div", { class: "cqa-head" }, h("div", {}, h("h1", { class: "cqa-title" }, "Чек-листы"), h("p", { class: "cqa-sub" }, "Каждое сохранение создаёт новую версию"))),
+    return CQA.page(
+      CQA.top("Чек-листы", ["Каждое сохранение создаёт новую версию"], actions),
       h("div", { class: "cqa-master" }, left, right));
   };
 })(window.CQA);
