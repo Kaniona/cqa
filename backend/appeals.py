@@ -72,9 +72,9 @@ def _fragment(transcript, evidence_ids, checked):
 
 def decide(appeal_id, decision, new_answer, decision_reason, decided_by=None):
     if decision not in ("confirmed", "changed"):
-        raise HTTPException(422, "decision должен быть confirmed или changed")
+        raise HTTPException(422, "Выберите решение: подтвердить или изменить")
     if not (decision_reason or "").strip():
-        raise HTTPException(422, "decision_reason обязателен")
+        raise HTTPException(422, "Укажите причину решения")
     with closing(db.connect()) as conn, conn:  # решение и пересчёт — одна транзакция
         a = db.row(conn, "SELECT * FROM appeals WHERE id=?", (appeal_id,))
         if a is None:
@@ -87,7 +87,7 @@ def decide(appeal_id, decision, new_answer, decision_reason, decided_by=None):
             criteria = db.get_checklist(conn, ev["checklist_id"], ev["checklist_version"])["criteria"]
             criterion = next(c for c in criteria if c["id"] == a["criterion_id"])
             if new_answer is None:
-                raise HTTPException(422, "для changed нужен new_answer")
+                raise HTTPException(422, "Выберите новый ответ")
             if criterion["type"] == "scale" and isinstance(new_answer, str) and new_answer != "NA":
                 try:  # из <select> ступень приходит строкой
                     new_answer = float(new_answer) if "." in new_answer else int(new_answer)
