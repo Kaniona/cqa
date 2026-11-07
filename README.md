@@ -1,7 +1,7 @@
 # CQA — Conversation Quality Analytics
 
 ИИ оценивает диалог оператора по чек-листу, человек может оспорить оценку, проверяющий выносит решение, итог пересчитывается.
-Бэкенд: FastAPI + SQLite. Если положить сайт в папку `frontend/`, сервер раздаёт его с `/`.
+Бэкенд: FastAPI + SQLite. Сайт (`frontend/`) раздаётся сервером с `/`.
 
 ## Требования
 
@@ -23,7 +23,7 @@ python3 -m venv .venv
 cp .env.example .env
 .venv/bin/python -m uvicorn backend.main:app --port 8000
 ```
-Документация API: http://localhost:8000/docs.
+Сайт: http://localhost:8000, документация API: http://localhost:8000/docs.
 
 ## `.env`
 
