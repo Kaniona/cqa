@@ -1,0 +1,18 @@
+import json
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+
+from backend import config, main
+
+STANDARD = json.loads((Path(__file__).parent / "checklist_standard.json").read_text(encoding="utf-8"))
+ROW1 = {"c01": "yes", "c02": "yes", "c03": "yes", "c04": 15, "c05": "yes", "c06": 7, "c07": "no", "c08": "no"}
+
+
+@pytest.fixture
+def client(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "DB_PATH", str(tmp_path / "test.db"))
+    monkeypatch.setattr(config, "SEED_CHECKLIST", tmp_path / "none.json")
+    with TestClient(main.app) as c:
+        yield c

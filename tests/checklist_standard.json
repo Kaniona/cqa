@@ -1,0 +1,14 @@
+{"id": "chat-quality", "version": 1, "name": "Качество чатов (тестовый)", "criteria": [
+ {"id": "c01", "section": "Начало", "title": "Приветствие", "instruction": "Оператор поздоровался", "type": "yes_no", "weight": 10, "na_allowed": false, "is_critical": false},
+ {"id": "c02", "section": "Начало", "title": "Выявление потребности", "instruction": "Уточнил запрос", "type": "yes_no", "weight": 15, "na_allowed": true, "na_condition": "Запрос ясен сразу", "is_critical": false},
+ {"id": "c03", "section": "Безопасность и решение", "title": "Верификация", "instruction": "Проверил клиента", "type": "yes_no", "weight": 20, "na_allowed": true, "na_condition": "Нет доступа к данным счёта", "is_critical": false},
+ {"id": "c04", "section": "Безопасность и решение", "title": "Корректная и полная консультация", "instruction": "Ответ верный и полный", "type": "scale", "weight": 20,
+  "steps": [{"value": 20, "label": "полно"}, {"value": 15, "label": "мелкие пробелы"}, {"value": 10, "label": "частично"}, {"value": 5, "label": "слабо"}, {"value": 0, "label": "неверно"}],
+  "na_allowed": false, "is_critical": false},
+ {"id": "c05", "section": "Безопасность и решение", "title": "Решение вопроса", "instruction": "Вопрос решён", "type": "yes_no", "weight": 15, "na_allowed": false, "is_critical": false},
+ {"id": "c06", "section": "Общение", "title": "Вежливость и ясность", "instruction": "Тон и ясность", "type": "scale", "weight": 15,
+  "steps": [{"value": 0, "label": "плохо"}, {"value": 4, "label": "слабо"}, {"value": 7, "label": "хорошо"}, {"value": 10, "label": "отлично"}],
+  "na_allowed": false, "is_critical": false},
+ {"id": "c07", "section": "Общение", "title": "Завершение", "instruction": "Попрощался и предложил помощь", "type": "yes_no", "weight": 5, "na_allowed": true, "na_condition": "Клиент ушёл первым", "is_critical": false},
+ {"id": "c08", "section": "Безопасность и решение", "title": "Грубая ошибка", "instruction": "Раскрыл данные или нагрубил", "type": "yes_no", "weight": 0, "na_allowed": false, "is_critical": true}
+]}
