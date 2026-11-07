@@ -37,6 +37,10 @@ CREATE TABLE IF NOT EXISTS appeals(
   created_at TEXT NOT NULL, decision TEXT, new_answer TEXT, decision_reason TEXT,
   decided_by TEXT, decided_at TEXT);
 CREATE UNIQUE INDEX IF NOT EXISTS appeals_one_open ON appeals(evaluation_id, criterion_id) WHERE status = 'open';
+-- кэш учебной переигровки; официальную оценку не трогает
+CREATE TABLE IF NOT EXISTS replays(
+  cache_key TEXT PRIMARY KEY, evaluation_id INTEGER NOT NULL, kind TEXT NOT NULL, turn_id TEXT, text TEXT,
+  model TEXT, prompt_version TEXT, response_json TEXT NOT NULL, created_at TEXT NOT NULL);
 -- ai_* после записи не меняются никогда
 CREATE TRIGGER IF NOT EXISTS evaluations_ai_frozen BEFORE UPDATE OF ai_total, ai_critical_flag ON evaluations
   WHEN OLD.status NOT IN ('queued', 'running') BEGIN SELECT RAISE(ABORT, 'ai_* неизменны'); END;

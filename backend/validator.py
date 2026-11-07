@@ -27,8 +27,13 @@ def _answer(c, raw):
     return None
 
 
+def strip_fence(raw_text):
+    """Ответ модели без обёртки ```json ... ```."""
+    return re.sub(r"^```(?:json)?\s*|\s*```$", "", (raw_text or "").strip())
+
+
 def validate(raw_text, conversation, checklist):
-    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", (raw_text or "").strip())
+    text = strip_fence(raw_text)
     try:
         data = json.loads(text)
     except ValueError as e:

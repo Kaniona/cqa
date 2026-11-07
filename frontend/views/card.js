@@ -145,6 +145,60 @@
       Object.entries(turnEls).forEach(([uid, el]) => el.classList.toggle("cqa-playing", uid === current && !audioRef.el.paused));
     };
 
+    // «Переиграть»: учебная симуляция с другой репликой оператора. Официальную оценку не меняет.
+    const hasOperator = conv.transcript.some((t) => t.speaker === "operator");
+    function replayPanel(r) {
+      const box = h("div", { class: "cqa-replay", "aria-live": "polite" });
+      let turnId = null, original = "", text = "";
+      const close = () => h("button", { class: "cqa-btn", onClick: () => { box.style.display = "none"; } }, "Закрыть");
+      const loading = (label) => CQA.fill(box, h("div", { class: "cqa-empty" }, label));
+      const fail = (e, retry) => CQA.fill(box, h("div", { class: "cqa-alert cqa-alert-err" }, e.message),
+        h("div", { class: "cqa-row" }, h("button", { class: "cqa-btn cqa-go", onClick: retry }, "Повторить"), close()));
+      async function suggest() {
+        loading("Готовим черновик…");
+        try {
+          const s = await api.replaySuggest(ev.id, r.criterion_id);
+          turnId = s.turn_id; original = s.original_text; text = s.suggested_text;
+          edit();
+        } catch (e) { fail(e, suggest); }
+      }
+      function edit() {
+        const input = h("textarea", { class: "cqa-input", "aria-label": "Новая реплика оператора", maxlength: 1000, onInput: () => { text = input.value; update(); } });
+        input.value = text;
+        const hint = h("div", { class: "cqa-small", style: "color:var(--cqa-amber)" });
+        const run = h("button", { class: "cqa-btn cqa-go", onClick: check }, "Проверить ответ");
+        const update = () => {
+          const marker = /\[уточнить/i.test(text);
+          hint.textContent = marker ? "Подставьте настоящее значение перед проверкой" : "";
+          run.disabled = marker || !text.trim();
+        };
+        CQA.fill(box,
+          h("div", { class: "cqa-small cqa-muted" }, `Исходная реплика оператора (${turnId})`),
+          h("div", { class: "cqa-quote" }, original),
+          h("div", { class: "cqa-small cqa-muted" }, "Как можно было ответить"), input, hint,
+          h("div", { class: "cqa-row" }, run, close()),
+          window.CQA_MOCK && h("span", { class: "cqa-tag cqa-tag-warn" }, "Демо-данные"));
+        update();
+      }
+      async function check() {
+        loading("Проверяем ответ…");
+        try { result(await api.replay(ev.id, { criterion_id: r.criterion_id, turn_id: turnId, text })); } catch (e) { fail(e, check); }
+      }
+      function result(res) {
+        CQA.fill(box,
+          h("div", { class: "cqa-replay-score" }, `${CQA.num(res.before_total)} → ${CQA.num(res.after_total)}`),
+          res.changes.length ? res.changes.map((c) => h("div", {}, h("b", {}, c.title), `: ${CQA.num(c.before_points)} → ${CQA.num(c.after_points)} баллов`, h("div", { class: "cqa-small cqa-muted" }, c.reason)))
+            : h("div", { class: "cqa-muted" }, "Оценка по критериям не изменилась."),
+          res.after_critical_flag && !res.before_critical_flag && h("div", {}, h("span", { class: "cqa-tag cqa-tag-err" }, "⚠ Грубая ошибка")),
+          h("div", { class: "cqa-small cqa-muted" }, "Симуляция. Официальная оценка не изменилась" + (res.cached ? " (из кэша)" : "") + "."),
+          h("div", { class: "cqa-row" }, h("button", { class: "cqa-btn cqa-dis", onClick: edit }, "Изменить ответ"), close()),
+          window.CQA_MOCK && h("span", { class: "cqa-tag cqa-tag-warn" }, "Демо-данные"));
+      }
+      box.style.display = "none";
+      box.start = () => { box.style.display = ""; if (!turnId) suggest(); else edit(); };
+      return box;
+    }
+
     // Строка критерия и раскрывающееся объяснение.
     function criterion(r, open) {
       const [mark, color, ratio] = stateOf(r);
@@ -166,6 +220,8 @@
 
       const first = r.evidence[0];
       const isNA = r.final_answer === "NA";
+      const lost = !r.is_critical && !isNA && r.points < r.effective_weight;
+      const replay = lost && hasOperator && ev.status === "done" ? replayPanel(r) : null;
       const full = isNA || (r.is_critical ? r.final_answer === "no" : r.points >= r.effective_weight);
       const whyTitle = isNA ? "Почему N/A." : r.is_critical && r.final_answer === "yes" ? "Выявлена грубая ошибка." : full ? "Обоснование." : "Почему снижена оценка.";
       const body = h("div", { class: "cqa-crit-body", style: open ? "" : "display:none" },
@@ -181,7 +237,9 @@
         h("div", { class: "cqa-acts" },
           first && h("button", { class: "cqa-btn cqa-go", onClick: () => goToTurn(first) }, "Перейти к фрагменту"),
           !first && r.checked_range && h("button", { class: "cqa-btn cqa-go", onClick: () => showRange(r.checked_range) }, "Показать проверенный участок"),
+          replay && h("button", { class: "cqa-btn", onClick: () => replay.start() }, "Переиграть"),
           isOperator && !hasOpen && h("button", { class: "cqa-btn cqa-dis", onClick: () => { form.style.display = ""; comment.focus(); } }, "Оспорить оценку")),
+        replay,
         hasOpen && h("div", {}, h("span", { class: "cqa-tag cqa-tag-warn" }, "Апелляция на рассмотрении")),
         form,
         appeals.map((a) => h("div", { class: "cqa-history" },

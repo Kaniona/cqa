@@ -254,3 +254,7 @@ textarea.cqa-input { width: 100%; resize: vertical; min-height: 70px; border-rad
   .cqa-editor-grid { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
   .cqa-editor { margin-left: 0; }
 }
+
+/* Переигровка */
+.cqa-replay { display: flex; flex-direction: column; gap: 9px; padding: 14px; border-radius: 18px; background: linear-gradient(100deg, rgba(47,214,180,.14), rgba(61,235,143,.04)); border: 1px solid rgba(61,235,143,.35); }
+.cqa-replay-score { font-size: 30px; font-weight: 800; line-height: 1.1; }

@@ -54,7 +54,17 @@ def mmss(t):
     return f"{s // 60:02d}:{s % 60:02d}"
 
 
-def build_user(conversation, checklist):
+def transcript_lines(conversation, changed=None):
+    """Строки транскрипта; реплика changed помечается ИЗМЕНЕНО (переигровка)."""
+    lines = []
+    for u in conversation["transcript"]:
+        when = mmss(u["t"]) if u.get("t") is not None else (u.get("timestamp") or "—")
+        mark = " | ИЗМЕНЕНО" if u["id"] == changed else ""
+        lines.append(f"[{u['id']} | {when}{mark}] {u['speaker']}: {u['text']}")
+    return lines
+
+
+def build_user(conversation, checklist, changed=None):
     lines = [f"Канал: {conversation['channel']}. Язык: {conversation['language']}.", "", "Критерии:"]
     for c in checklist["criteria"]:
         kind = "yes/no" if c["type"] == "yes_no" else "шкала"
@@ -68,8 +78,5 @@ def build_user(conversation, checklist):
             lines.append(f"NA разрешён, если: {c['na_condition']}")
         else:
             lines.append("NA запрещён.")
-    lines += ["", "Транскрипт:"]
-    for u in conversation["transcript"]:
-        when = mmss(u["t"]) if u.get("t") is not None else (u.get("timestamp") or "—")
-        lines.append(f"[{u['id']} | {when}] {u['speaker']}: {u['text']}")
+    lines += ["", "Транскрипт:"] + transcript_lines(conversation, changed)
     return "\n".join(lines)

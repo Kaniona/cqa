@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import analytics, appeals, audio, checklists, config, datasets, db, evaluator
+from . import analytics, appeals, audio, checklists, config, datasets, db, evaluator, replay
 
 
 @asynccontextmanager
@@ -50,6 +50,16 @@ class AppealIn(BaseModel):
     criterion_id: str
     comment: str
     created_by: str | None = None
+
+
+class ReplaySuggestIn(BaseModel):
+    criterion_id: str
+
+
+class ReplayIn(BaseModel):
+    criterion_id: str
+    turn_id: str
+    text: str
 
 
 class DecisionIn(BaseModel):
@@ -223,6 +233,16 @@ def get_evaluation(evaluation_id: int):
     if not ev:
         raise HTTPException(404, "оценка не найдена")
     return ev
+
+
+@app.post("/api/evaluations/{evaluation_id}/replay/suggest")
+def replay_suggest(evaluation_id: int, body: ReplaySuggestIn):
+    return replay.suggest(evaluation_id, body.criterion_id)
+
+
+@app.post("/api/evaluations/{evaluation_id}/replay")
+def replay_check(evaluation_id: int, body: ReplayIn):
+    return replay.replay(evaluation_id, body.criterion_id, body.turn_id, body.text)
 
 
 # --- апелляции и аналитика ---

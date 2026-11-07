@@ -469,6 +469,25 @@
       applyFinal(ev);
       return evalView(ev);
     }],
+    // Переигровка в демо-режиме: заранее заданные ответы, официальная оценка не меняется.
+    ["POST", /^\/evaluations\/(\d+)\/replay\/suggest$/, (m, b) => {
+      const ev = db.evaluations.find((e) => e.id === Number(m[1])) || fail("Оценка не найдена");
+      const r = ev.results.find((x) => x.criterion_id === b.criterion_id) || fail("Критерий не найден");
+      const c = conv(ev.group_id, ev.conversation_id);
+      const op = (id) => c.transcript.find((t) => t.id === id && t.speaker === "operator");
+      const turn = (r.evidence.map((e) => op(e.id)).find(Boolean)) || [...c.transcript].reverse().find((t) => t.speaker === "operator") || fail("В диалоге нет реплик оператора");
+      return { turn_id: turn.id, original_text: turn.text, suggested_text: "Демо-черновик: уточню ваш вопрос и отвечу в течение [уточнить срок]. Могу ещё чем-то помочь?", model: "demo", cached: false };
+    }],
+    ["POST", /^\/evaluations\/(\d+)\/replay$/, (m, b) => {
+      const ev = db.evaluations.find((e) => e.id === Number(m[1])) || fail("Оценка не найдена");
+      const r = ev.results.find((x) => x.criterion_id === b.criterion_id) || fail("Критерий не найден");
+      if (!(b.text || "").trim()) fail("напишите реплику оператора");
+      const gain = round2(Math.max(0, r.effective_weight - r.points));
+      return { simulated: true, turn_id: b.turn_id, before_total: ev.final_total, after_total: ev.final_total === null ? null : round2(Math.min(100, ev.final_total + gain)),
+        before_critical_flag: ev.final_critical_flag, after_critical_flag: /лично|переведите мне/i.test(b.text) || ev.final_critical_flag,
+        changes: gain ? [{ criterion_id: r.criterion_id, title: r.title, before_answer: r.final_answer, after_answer: "yes", before_points: r.points, after_points: r.effective_weight, reason: "Демо: новая реплика закрывает критерий." }] : [],
+        model: "demo", cached: false };
+    }],
     ["GET", /^\/analytics$/, (_, __, q) => analytics({ group_id: q.get("group_id"), checklist_id: q.get("checklist_id") })],
   ];
 

@@ -7,8 +7,9 @@ DEFAULT_MODELS = {"gemini": "gemini-3.6-flash", "groq": "openai/gpt-oss-120b", "
 
 
 class LLMError(Exception):
-    def __init__(self, message, retryable=False, retry_after=None):
+    def __init__(self, message, retryable=False, retry_after=None, status=None):
         super().__init__(message)
+        self.status = status
         self.retryable = retryable
         self.retry_after = retry_after
 
@@ -24,7 +25,7 @@ def _post(url, headers, body):
         raise LLMError(f"сеть: {type(e).__name__}", retryable=True)
     if resp.status_code == 429 or resp.status_code >= 500:
         retry_after = resp.headers.get("retry-after")
-        raise LLMError(f"провайдер ответил {resp.status_code}", retryable=True,
+        raise LLMError(f"провайдер ответил {resp.status_code}", retryable=True, status=resp.status_code,
                        retry_after=float(retry_after) if retry_after and retry_after.replace(".", "").isdigit() else None)
     if resp.status_code != 200:
         raise LLMError(f"провайдер ответил {resp.status_code}: {resp.text[:300]}")
