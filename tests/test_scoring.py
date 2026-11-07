@@ -23,7 +23,7 @@ def test_all_na():
     criteria = [{**c, "na_allowed": True, "na_condition": "x"} for c in CRITERIA if not c["is_critical"]]
     r = compute(criteria, {c["id"]: "NA" for c in criteria})
     assert r["total"] is None and r["critical_flag"] is False
-    assert all(s["total"] is None for s in r["sections"])
+    assert all(s["score"] is None for s in r["sections"])
 
 
 def test_weights_and_sections():
@@ -31,7 +31,7 @@ def test_weights_and_sections():
     per = {p["criterion_id"]: p for p in r["per_criterion"]}
     assert per["c07"]["effective_weight"] == 0 and per["c08"]["points"] == 0
     assert per["c01"]["effective_weight"] == 10.53  # 10 * 100 / 95
-    assert {s["section"]: s["total"] for s in r["sections"]}["Общение"] == 70.0  # c06 = 7/10, c07 N/A
+    assert {s["section"]: s["score"] for s in r["sections"]}["Общение"] == 70.0  # c06 = 7/10, c07 N/A
 
 
 def test_invalid_answers():

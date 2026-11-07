@@ -63,7 +63,7 @@ def test_dev_import_idempotent(client):
     assert sum(1 for c in convs if c["audio_path"]) == 5
     detail = client.get("/api/conversations/DEV/p1-ru-001").json()
     assert "audio_url" not in detail and detail["transcript"][0]["id"] == "u1"
-    lengths = sorted(c["utterances"] for c in convs)
+    lengths = sorted(c["turn_count"] for c in convs)
     assert lengths[0] == 11 and lengths[-1] == 115
 
 
@@ -100,7 +100,8 @@ def test_full_path(client, monkeypatch):
     assert client.post("/api/appeals", json={"evaluation_id": eid, "criterion_id": "c07",
                                              "comment": "ещё"}).status_code == 409
     queue = client.get("/api/appeals?status=open").json()
-    assert queue[0]["criterion"]["id"] == "c07" and queue[0]["fragment"]
+    assert client.get("/api/appeals?status=resolved").json() == []
+    assert queue[0]["criterion_id"] == "c07" and queue[0]["title"] == "Завершение" and queue[0]["fragment"]
     aid = appeal.json()["id"]
     assert client.post(f"/api/appeals/{aid}/decision", json={"decision": "changed", "new_answer": "NA",
                                                              "decision_reason": "Клиент ушёл первым"}).status_code == 200

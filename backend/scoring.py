@@ -64,7 +64,7 @@ def compute(criteria, answers):
             "points": rnd(ew * (r or 0)),
         })
     sections = [
-        {"section": s, "total": rnd(total([c for c in criteria if c.get("section") == s])[0])}
+        {"section": s, "score": rnd(total([c for c in criteria if c.get("section") == s])[0])}
         for s in dict.fromkeys(c.get("section") for c in criteria)
     ]
     flag = any(c.get("is_critical") and answers[c["id"]] == "yes" for c in criteria)

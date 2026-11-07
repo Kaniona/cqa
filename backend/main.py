@@ -100,9 +100,9 @@ def list_conversations(group_id: str | None = None, channel: str | None = None, 
         ev = latest.get((c["group_id"], c["conversation_id"]))
         item = {
             "group_id": c["group_id"], "conversation_id": c["conversation_id"], "channel": c["channel"],
-            "language": c["language"], "utterances": len(transcript), "duration": max(times) if times else None,
+            "language": c["language"], "turn_count": len(transcript), "duration": max(times) if times else None,
             "audio_path": _audio_path(c),
-            "evaluation_id": ev and ev["id"], "status": ev["status"] if ev else "not_evaluated",
+            "evaluation_id": ev and ev["id"], "status": ev["status"] if ev else "new",
             "ai_total": ev and ev["ai_total"], "final_total": ev and ev["final_total"],
             "critical_flag": bool(ev and ev["final_critical_flag"]),
             "open_appeals": open_appeals.get(ev["id"], 0) if ev else 0,

@@ -31,8 +31,11 @@ def create(evaluation_id, criterion_id, comment, created_by=None):
 
 def queue(status=None):
     with closing(db.connect()) as conn:
-        appeals = db.rows(conn, "SELECT * FROM appeals" + (" WHERE status=?" if status else "") + " ORDER BY id",
-                          (status,) if status else ())
+        if status == "resolved":  # так фронтенд просит все закрытые
+            appeals = db.rows(conn, "SELECT * FROM appeals WHERE status != 'open' ORDER BY id")
+        else:
+            appeals = db.rows(conn, "SELECT * FROM appeals" + (" WHERE status=?" if status else "") + " ORDER BY id",
+                              (status,) if status else ())
         out = []
         for a in appeals:
             ev = db.row(conn, "SELECT * FROM evaluations WHERE id=?", (a["evaluation_id"],))
@@ -42,12 +45,16 @@ def queue(status=None):
                        (a["evaluation_id"], a["criterion_id"]))
             evidence = json.loads(r["evidence_json"] or "[]")
             checked = json.loads(r["checked_range_json"] or "null")
-            transcript = db.get_conversation(conn, ev["group_id"], ev["conversation_id"])["transcript"]
+            conv = db.get_conversation(conn, ev["group_id"], ev["conversation_id"])
+            transcript = conv["transcript"]
             out.append({
                 **a,
                 "new_answer": json.loads(a["new_answer"]) if a["new_answer"] is not None else None,
                 "group_id": ev["group_id"], "conversation_id": ev["conversation_id"],
-                "criterion": criterion,
+                "language": conv["language"], "channel": conv["channel"],
+                "criterion": criterion, "title": criterion["title"], "type": criterion["type"],
+                "steps": criterion.get("steps"), "na_allowed": bool(criterion.get("na_allowed")),
+                "ai_total": ev["ai_total"], "final_total": ev["final_total"],
                 "ai_answer": json.loads(r["ai_answer"]), "final_answer": json.loads(r["final_answer"]),
                 "reason": r["reason"], "evidence": evidence, "checked_range": checked,
                 "fragment": _fragment(transcript, [e.get("id") for e in evidence], checked),
@@ -84,6 +91,11 @@ def decide(appeal_id, decision, new_answer, decision_reason, decided_by=None):
             criterion = next(c for c in criteria if c["id"] == a["criterion_id"])
             if new_answer is None:
                 raise HTTPException(422, "для changed нужен new_answer")
+            if criterion["type"] == "scale" and isinstance(new_answer, str) and new_answer != "NA":
+                try:  # из <select> ступень приходит строкой
+                    new_answer = float(new_answer) if "." in new_answer else int(new_answer)
+                except ValueError:
+                    pass
             try:
                 scoring.check_answer(criterion, new_answer)
             except ValueError as e:
